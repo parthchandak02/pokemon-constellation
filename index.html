@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TYPE — Pokemon Constellation</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; }
+  canvas {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: block;
+    touch-action: manipulation;
+  }
+  #hero {
+    position: fixed; top: 20px; right: 20px; text-align: right;
+    font-family: system-ui, sans-serif; pointer-events: none; z-index: 2;
+  }
+  #hero .num {
+    font-size: 48px; font-weight: 200; letter-spacing: -0.02em;
+    color: rgba(255,255,255,0.85); line-height: 1;
+  }
+  #hero .lbl {
+    font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 4px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  #stamp {
+    position: fixed; bottom: 20px; left: 16px;
+    font-family: system-ui, sans-serif; font-size: 10px;
+    color: rgba(255,255,255,0.4); pointer-events: none; z-index: 2;
+  }
+  #legend {
+    position: fixed; bottom: 44px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-wrap: wrap; gap: 6px 10px; justify-content: center;
+    max-width: 92vw; pointer-events: none; z-index: 2;
+  }
+  .leg-item {
+    display: flex; align-items: center; gap: 4px;
+    font-family: system-ui, sans-serif; font-size: 9px;
+    color: rgba(255,255,255,0.45); letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .leg-dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  }
+  .leg-size {
+    display: flex; align-items: center; gap: 6px;
+    font-family: system-ui, sans-serif; font-size: 9px;
+    color: rgba(255,255,255,0.45); letter-spacing: 0.04em;
+    margin-left: 8px; padding-left: 10px;
+    border-left: 1px solid rgba(255,255,255,0.12);
+  }
+  .leg-size svg { display: block; }
+  #desc {
+    position: fixed; bottom: 68px; left: 50%; transform: translateX(-50%);
+    font-family: system-ui, sans-serif; font-size: 11px;
+    color: rgba(255,255,255,0.45); text-align: center;
+    max-width: 80vw; pointer-events: none; z-index: 2;
+  }
+  #panel {
+    position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%) translateY(12px);
+    min-width: 220px; max-width: 90vw; padding: 14px 18px;
+    background: rgba(10,10,15,0.92);
+    border: 1px solid rgba(0,230,118,0.25);
+    border-radius: 2px;
+    font-family: system-ui, sans-serif;
+    opacity: 0; pointer-events: none; z-index: 3;
+    transition: opacity var(--motion-base) var(--ease-out-expo),
+                transform var(--motion-base) var(--ease-out-expo);
+    box-shadow: 0 0 24px rgba(0,230,118,0.08);
+  }
+  #panel.visible {
+    opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto;
+  }
+  #panel .pname {
+    font-size: 16px; font-weight: 500; color: rgba(255,255,255,0.9);
+    letter-spacing: 0.02em; margin-bottom: 6px;
+  }
+  #panel .ptypes {
+    display: flex; gap: 6px; margin-bottom: 10px;
+  }
+  #panel .ptype {
+    font-size: 10px; padding: 2px 8px; border-radius: 1px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    border: 1px solid currentColor;
+  }
+  #panel .pstats {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px;
+    font-size: 10px; color: rgba(255,255,255,0.5);
+  }
+  #panel .pstat b { color: rgba(255,255,255,0.75); font-weight: 500; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hero"><div class="num" id="heroNum">-</div><div class="lbl">in constellation</div></div>
+<div id="stamp">PokéAPI · loading...</div>
+<div id="legend"></div>
+<div id="desc">Each Pokemon is a star in this type-driven constellation</div>
+<div id="panel">
+  <div class="pname" id="pName"></div>
+  <div class="ptypes" id="pTypes"></div>
+  <div class="pstats" id="pStats"></div>
+</div>
+<script>
+const C = {
+  palette: {
+    bg: '#0a0a0f',
+    track: '#1a1a2e',
+    accent1: '#00e676',
+    accent2: '#2979ff',
+    accent3: '#ff1744',
+    glow: '#00e676',
+    text: 'rgba(255,255,255,0.5)',
+  },
+  stroke: { hair: 0.5, fine: 1, medium: 2, heavy: 4 },
+  alpha: { bg: 0.08, field: 0.25, active: 0.7, label: 0.45 },
+  motion: { fast: 160, base: 240, slow: 360 },
+  easeOutExpo: 'cubic-bezier(0.22,1,0.36,1)',
+  typeColors: {
+    fire: '#ff4444', water: '#3399ff', grass: '#33cc33', electric: '#ffdd33',
+    psychic: '#ff66cc', poison: '#aa44aa', rock: '#bbaabb', ground: '#ddbb55',
+    ice: '#66ddff', bug: '#aabb22', flying: '#99aaff', fighting: '#bb5544',
+    normal: '#aaaaaa', ghost: '#6644aa', dragon: '#7744ff', dark: '#554444',
+    steel: '#aaaabb', fairy: '#ffaaff',
+  },
+  starRadius: { min: 5, max: 30 },
+  statsRange: { min: 180, max: 720 },
+  pulseRange: { min: 0.8, max: 1.2 },
+  focusScale: 1.2,
+  glowBlur: 20,
+  maxGlowEntities: 20,
+  pokemonLimit: 30,
+  apiList: 'https://pokeapi.co/api/v2/pokemon?limit=30&offset=',
+  apiDetail: 'https://pokeapi.co/api/v2/pokemon/',
+  driftSpeed: 0.00012,
+  dotGridSpacing: 24,
+  dotGridAlpha: 0.06,
+  panelIdleMs: 3000,
+  rippleDuration: 800,
+  ringDuration: 600,
+  connectionAlpha: 0.12,
+  connectionFocusAlpha: 0.55,
+  idHueShift: 0.04,
+};
+
+document.documentElement.style.setProperty('--motion-fast', C.motion.fast + 'ms');
+document.documentElement.style.setProperty('--motion-base', C.motion.base + 'ms');
+document.documentElement.style.setProperty('--motion-slow', C.motion.slow + 'ms');
+document.documentElement.style.setProperty('--ease-out-expo', C.easeOutExpo);
+
+const FALLBACK = [
+  { id: 25, name: 'pikachu', types: ['electric'], stats: { hp: 35, attack: 55, defense: 40, 'special-attack': 50, 'special-defense': 50, speed: 90 }, total: 320 },
+  { id: 6, name: 'charizard', types: ['fire', 'flying'], stats: { hp: 78, attack: 84, defense: 78, 'special-attack': 109, 'special-defense': 85, speed: 100 }, total: 534 },
+  { id: 9, name: 'blastoise', types: ['water'], stats: { hp: 79, attack: 83, defense: 100, 'special-attack': 85, 'special-defense': 105, speed: 78 }, total: 530 },
+  { id: 3, name: 'venusaur', types: ['grass', 'poison'], stats: { hp: 80, attack: 82, defense: 83, 'special-attack': 100, 'special-defense': 100, speed: 80 }, total: 525 },
+  { id: 150, name: 'mewtwo', types: ['psychic'], stats: { hp: 106, attack: 110, defense: 90, 'special-attack': 154, 'special-defense': 90, speed: 130 }, total: 680 },
+  { id: 94, name: 'gengar', types: ['ghost', 'poison'], stats: { hp: 60, attack: 65, defense: 60, 'special-attack': 130, 'special-defense': 75, speed: 110 }, total: 500 },
+  { id: 149, name: 'dragonite', types: ['dragon', 'flying'], stats: { hp: 91, attack: 134, defense: 95, 'special-attack': 100, 'special-defense': 100, speed: 80 }, total: 600 },
+  { id: 143, name: 'snorlax', types: ['normal'], stats: { hp: 160, attack: 110, defense: 65, 'special-attack': 65, 'special-defense': 110, speed: 30 }, total: 540 },
+  { id: 448, name: 'lucario', types: ['fighting', 'steel'], stats: { hp: 70, attack: 110, defense: 70, 'special-attack': 115, 'special-defense': 70, speed: 90 }, total: 525 },
+  { id: 282, name: 'gardevoir', types: ['psychic', 'fairy'], stats: { hp: 68, attack: 65, defense: 65, 'special-attack': 125, 'special-defense': 115, speed: 80 }, total: 518 },
+];
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, dpr = 1;
+let stars = [];
+let connections = [];
+let focusIdx = -1;
+let drift = { x: 0, y: 0 };
+let driftAngle = 0;
+let dataSource = 'loading';
+let dataTime = '';
+let tapping = false;
+let firstTapDone = false;
+let ripples = [];
+let focusRing = null;
+let panelTimer = null;
+let animId = 0;
+let t0 = performance.now();
+
+function invertScale(value, outMin, outMax, inMin, inMax) {
+  const t = Math.max(0, Math.min(1, (value - inMin) / (inMax - inMin)));
+  return outMin + t * (outMax - outMin);
+}
+
+function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function typeColor(type) { return C.typeColors[type] || C.palette.text; }
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function shiftColor(hex, id) {
+  const shift = ((id % 300) / 300 - 0.5) * C.idHueShift;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const nr = Math.max(0, Math.min(255, Math.round(r + shift * 255)));
+  const ng = Math.max(0, Math.min(255, Math.round(g + shift * 128)));
+  const nb = Math.max(0, Math.min(255, Math.round(b - shift * 64)));
+  return `rgb(${nr},${ng},${nb})`;
+}
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  layoutStars();
+}
+
+function layoutStars() {
+  const cx = W * 0.5, cy = H * 0.48;
+  const spread = Math.min(W, H) * 0.38;
+  const n = stars.length;
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < n; i++) {
+    const s = stars[i];
+    const angle = i * golden;
+    const r = spread * Math.sqrt((i + 0.5) / n) * (0.85 + (s.id % 7) * 0.02);
+    s.baseX = cx + Math.cos(angle) * r;
+    s.baseY = cy + Math.sin(angle) * r;
+    s.phase = (s.id * 0.37) % (Math.PI * 2);
+  }
+}
+
+function seedWarmup() {
+  stars = FALLBACK.map((p, i) => ({
+    id: p.id,
+    name: p.name,
+    types: p.types,
+    stats: p.stats,
+    total: p.total,
+    baseRadius: invertScale(p.total, C.starRadius.min, C.starRadius.max, C.statsRange.min, C.statsRange.max),
+    primaryType: p.types[0],
+    color: shiftColor(typeColor(p.types[0]), p.id),
+    baseX: 0, baseY: 0,
+    phase: i * 0.9,
+  }));
+  buildConnections();
+  document.getElementById('heroNum').textContent = stars.length;
+  buildLegend();
+}
+
+function buildConnections() {
+  connections = [];
+  for (let i = 0; i < stars.length; i++) {
+    for (let j = i + 1; j < stars.length; j++) {
+      const shared = stars[i].types.filter(t => stars[j].types.includes(t));
+      if (shared.length > 0) {
+        connections.push({ a: i, b: j, types: shared });
+      }
+    }
+  }
+}
+
+function buildLegend() {
+  const used = new Set();
+  stars.forEach(s => s.types.forEach(t => used.add(t)));
+  const el = document.getElementById('legend');
+  el.innerHTML = '';
+  [...used].sort().forEach(type => {
+    const item = document.createElement('div');
+    item.className = 'leg-item';
+    const dot = document.createElement('div');
+    dot.className = 'leg-dot';
+    dot.style.background = typeColor(type);
+    dot.style.boxShadow = `0 0 6px ${typeColor(type)}`;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(type));
+    el.appendChild(item);
+  });
+  const sizeKey = document.createElement('div');
+  sizeKey.className = 'leg-size';
+  sizeKey.innerHTML =
+    '<svg width="36" height="12" viewBox="0 0 36 12">' +
+    '<circle cx="4" cy="6" r="3" fill="rgba(255,255,255,0.35)"/>' +
+    '<circle cx="28" cy="6" r="6" fill="rgba(255,255,255,0.55)"/>' +
+    '</svg><span>size = total stats</span>';
+  el.appendChild(sizeKey);
+}
+
+function updateStamp() {
+  const mode = dataSource === 'live' ? 'live' : 'fallback';
+  document.getElementById('stamp').textContent =
+    `PokéAPI · updated ${dataTime} · ${mode}`;
+}
+
+async function fetchPokemon() {
+  const maxOffset = 1025 - C.pokemonLimit;
+  const offset = Math.floor(Math.random() * maxOffset);
+  try {
+    const listRes = await fetch(C.apiList + offset);
+    if (!listRes.ok) throw new Error('list fail');
+    const list = await listRes.json();
+    const results = list.results.slice(0, C.pokemonLimit);
+    const details = await Promise.all(
+      results.map(async (r) => {
+        const id = parseInt(r.url.split('/').filter(Boolean).pop(), 10);
+        const res = await fetch(C.apiDetail + id + '/');
+        if (!res.ok) throw new Error('detail fail');
+        return res.json();
+      })
+    );
+    stars = details.map((p, i) => {
+      const types = p.types.sort((a, b) => a.slot - b.slot).map(t => t.type.name);
+      const stats = {};
+      let total = 0;
+      p.stats.forEach(s => {
+        stats[s.stat.name] = s.base_stat;
+        total += s.base_stat;
+      });
+      return {
+        id: p.id,
+        name: p.name,
+        types,
+        stats,
+        total,
+        baseRadius: invertScale(total, C.starRadius.min, C.starRadius.max, C.statsRange.min, C.statsRange.max),
+        primaryType: types[0],
+        color: shiftColor(typeColor(types[0]), p.id),
+        baseX: 0, baseY: 0,
+        phase: (p.id * 0.37) % (Math.PI * 2),
+      };
+    });
+    dataSource = 'live';
+    dataTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    buildConnections();
+    layoutStars();
+    document.getElementById('heroNum').textContent = stars.length;
+    buildLegend();
+    updateStamp();
+  } catch {
+    stars = FALLBACK.map((p, i) => ({
+      id: p.id,
+      name: p.name,
+      types: p.types,
+      stats: p.stats,
+      total: p.total,
+      baseRadius: invertScale(p.total, C.starRadius.min, C.starRadius.max, C.statsRange.min, C.statsRange.max),
+      primaryType: p.types[0],
+      color: shiftColor(typeColor(p.types[0]), p.id),
+      baseX: 0, baseY: 0,
+      phase: i * 0.9,
+    }));
+    dataSource = 'fallback';
+    dataTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    buildConnections();
+    layoutStars();
+    document.getElementById('heroNum').textContent = stars.length;
+    buildLegend();
+    updateStamp();
+  }
+}
+
+function drawDotGrid() {
+  ctx.fillStyle = C.palette.bg;
+  ctx.fillRect(0, 0, W, H);
+  const sp = C.dotGridSpacing;
+  ctx.fillStyle = `rgba(255,255,255,${C.dotGridAlpha})`;
+  const ox = (drift.x * 0.3) % sp;
+  const oy = (drift.y * 0.3) % sp;
+  for (let x = ox; x < W; x += sp) {
+    for (let y = oy; y < H; y += sp) {
+      ctx.beginPath();
+      ctx.arc(x, y, 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function starPos(s, now) {
+  const pulse = C.pulseRange.min + (C.pulseRange.max - C.pulseRange.min) *
+    (0.5 + 0.5 * Math.sin(now * 0.001 + s.phase));
+  let scale = pulse;
+  if (stars.indexOf(s) === focusIdx) scale *= C.focusScale;
+  const x = s.baseX + drift.x;
+  const y = s.baseY + drift.y;
+  const r = s.baseRadius * scale;
+  return { x, y, r, pulse };
+}
+
+function drawConnections(now, glowSet) {
+  connections.forEach(conn => {
+    const sa = stars[conn.a], sb = stars[conn.b];
+    const pa = starPos(sa, now), pb = starPos(sb, now);
+    const isFocus = focusIdx >= 0 && (conn.a === focusIdx || conn.b === focusIdx);
+    const alpha = isFocus ? C.connectionFocusAlpha : C.connectionAlpha;
+    const sharedColor = typeColor(conn.types[0]);
+    ctx.beginPath();
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+    ctx.strokeStyle = isFocus
+      ? hexToRgba(sharedColor, alpha)
+      : `rgba(255,255,255,${alpha})`;
+    ctx.lineWidth = isFocus ? C.stroke.medium : C.stroke.hair;
+    ctx.stroke();
+    if (isFocus && glowSet.size < C.maxGlowEntities) {
+      ctx.save();
+      ctx.shadowColor = sharedColor;
+      ctx.shadowBlur = C.glowBlur * 0.5;
+      ctx.stroke();
+      ctx.restore();
+      glowSet.add('conn-' + conn.a + '-' + conn.b);
+    }
+  });
+}
+
+function drawStars(now, glowSet) {
+  const sorted = stars.map((s, i) => ({ s, i, pos: starPos(s, now) }))
+    .sort((a, b) => a.pos.r - b.pos.r);
+  sorted.forEach(({ s, i, pos }) => {
+    const isFocus = i === focusIdx;
+    const canGlow = glowSet.size < C.maxGlowEntities && (isFocus || focusIdx < 0);
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, pos.r, 0, Math.PI * 2);
+    ctx.fillStyle = s.color;
+    if (canGlow) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(200,255,240,0.9)';
+      ctx.shadowBlur = C.glowBlur;
+      ctx.fill();
+      ctx.restore();
+      glowSet.add('star-' + i);
+    } else {
+      ctx.fill();
+    }
+    if (isFocus) {
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, pos.r + 2, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255,255,255,${C.alpha.active})`;
+      ctx.lineWidth = C.stroke.fine;
+      ctx.stroke();
+    }
+  });
+}
+
+function drawRipples(now) {
+  ripples = ripples.filter(r => now - r.t0 < C.rippleDuration);
+  ripples.forEach(r => {
+    const t = (now - r.t0) / C.rippleDuration;
+    const radius = 10 + t * 80;
+    const alpha = (1 - t) * 0.35;
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(0,230,118,${alpha})`;
+    ctx.lineWidth = C.stroke.medium;
+    ctx.stroke();
+  });
+}
+
+function drawFocusRing(now) {
+  if (!focusRing) return;
+  const t = (now - focusRing.t0) / C.ringDuration;
+  if (t >= 1) { focusRing = null; return; }
+  const s = stars[focusRing.idx];
+  const pos = starPos(s, now);
+  const radius = pos.r + 4 + t * 30;
+  const alpha = (1 - t) * 0.6;
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(0,230,118,${alpha})`;
+  ctx.lineWidth = C.stroke.fine;
+  ctx.stroke();
+}
+
+function render(now) {
+  driftAngle += C.driftSpeed * (now - (render._last || now));
+  render._last = now;
+  drift.x = Math.cos(driftAngle * 0.7) * 18;
+  drift.y = Math.sin(driftAngle) * 12;
+
+  drawDotGrid();
+  const glowSet = new Set();
+  drawConnections(now, glowSet);
+  drawStars(now, glowSet);
+  drawRipples(now);
+  drawFocusRing(now);
+}
+
+function loop(now) {
+  render(now);
+  animId = requestAnimationFrame(loop);
+}
+
+function hitTest(px, py) {
+  const now = performance.now();
+  let best = -1, bestD = Infinity;
+  stars.forEach((s, i) => {
+    const pos = starPos(s, now);
+    const d = Math.hypot(px - pos.x, py - pos.y);
+    const hitR = Math.max(pos.r + 8, 14);
+    if (d < hitR && d < bestD) { best = i; bestD = d; }
+  });
+  return best;
+}
+
+function showPanel(s) {
+  const panel = document.getElementById('panel');
+  document.getElementById('pName').textContent = capitalize(s.name);
+  const typesEl = document.getElementById('pTypes');
+  typesEl.innerHTML = '';
+  s.types.forEach(t => {
+    const span = document.createElement('span');
+    span.className = 'ptype';
+    span.style.color = typeColor(t);
+    span.textContent = t;
+    typesEl.appendChild(span);
+  });
+  const statsEl = document.getElementById('pStats');
+  statsEl.innerHTML = '';
+  const labels = { hp: 'HP', attack: 'ATK', defense: 'DEF', 'special-attack': 'SpA', 'special-defense': 'SpD', speed: 'SPD' };
+  Object.keys(labels).forEach(k => {
+    if (s.stats[k] !== undefined) {
+      const div = document.createElement('div');
+      div.innerHTML = `${labels[k]} <b>${s.stats[k]}</b>`;
+      statsEl.appendChild(div);
+    }
+  });
+  const totalDiv = document.createElement('div');
+  totalDiv.innerHTML = `Total <b>${s.total}</b>`;
+  statsEl.appendChild(totalDiv);
+  panel.classList.add('visible');
+  clearTimeout(panelTimer);
+  panelTimer = setTimeout(() => panel.classList.remove('visible'), C.panelIdleMs);
+}
+
+function handleTap(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const px = clientX - rect.left;
+  const py = clientY - rect.top;
+  if (!firstTapDone) {
+    firstTapDone = true;
+    ripples.push({ x: px, y: py, t0: performance.now() });
+  }
+  const hit = hitTest(px, py);
+  if (hit >= 0) {
+    focusIdx = hit;
+    focusRing = { idx: hit, t0: performance.now() };
+    showPanel(stars[hit]);
+  } else {
+    focusIdx = -1;
+    document.getElementById('panel').classList.remove('visible');
+    clearTimeout(panelTimer);
+  }
+}
+
+canvas.addEventListener('touchstart', (e) => {
+  tapping = true;
+  if (e.touches.length === 1) {
+    handleTap(e.touches[0].clientX, e.touches[0].clientY);
+  }
+}, { passive: true });
+
+canvas.addEventListener('touchend', () => {
+  setTimeout(() => { tapping = false; }, 300);
+});
+
+canvas.addEventListener('click', (e) => {
+  if (tapping) return;
+  handleTap(e.clientX, e.clientY);
+});
+
+window.addEventListener('resize', resize);
+
+seedWarmup();
+resize();
+animId = requestAnimationFrame(loop);
+fetchPokemon();
+</script>
+</body>
+</html>
