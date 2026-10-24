@@ -11,17 +11,19 @@
 ![Data](https://img.shields.io/badge/data-Pok%C3%A9API-00e676?style=flat-square)
 ![Canvas 2D](https://img.shields.io/badge/Canvas%202D-single%20file-111111?style=flat-square&logo=html5&logoColor=white)
 ![Dependencies](https://img.shields.io/badge/dependencies-none-111111?style=flat-square)
-![Status](https://img.shields.io/badge/creative%20daily-experiment%2C%20not%20deployed-555555?style=flat-square)
+![Live](https://img.shields.io/badge/live-GitHub%20Pages-00e676?style=flat-square)
+![Status](https://img.shields.io/badge/creative%20daily-experiment-555555?style=flat-square)
 
 </h6>
 
+<a href="https://parthchandak02.github.io/type/"><b>Live demo</b></a> ·
 <a href="#how-it-works"><b>How it works</b></a> ·
 <a href="#tap-a-star"><b>Tap a star</b></a> ·
 <a href="#run-it"><b>Run it</b></a>
 
 <br><br>
 
-<img src="docs/assets/readme/hero.jpg" width="100%" alt="Thirty coloured circles of different sizes on a dark dot grid, joined by thin grey lines, with 30 in constellation in the top-right and a legend of Pokémon types along the bottom">
+<a href="https://parthchandak02.github.io/type/"><img src="docs/assets/readme/hero.jpg" width="100%" alt="Thirty coloured circles of different sizes on a dark dot grid, joined by thin grey lines, with 30 in constellation in the top-right and a legend of Pokémon types along the bottom"></a>
 
 <sub>Local capture, 22 October 2026. Real PokéAPI data; the batch is random on every load.</sub>
 

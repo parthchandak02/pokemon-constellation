@@ -28,10 +28,16 @@
     font-family: system-ui, sans-serif; font-size: 10px;
     color: rgba(255,255,255,0.4); pointer-events: none; z-index: 2;
   }
-  #legend {
+  /* desc sits above the legend in one bottom-anchored column, so a wrapping
+     legend or description pushes the other up instead of overlapping it */
+  #bottom {
     position: fixed; bottom: 44px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    width: 92vw; pointer-events: none; z-index: 2;
+  }
+  #legend {
     display: flex; flex-wrap: wrap; gap: 6px 10px; justify-content: center;
-    max-width: 92vw; pointer-events: none; z-index: 2;
+    max-width: 92vw;
   }
   .leg-item {
     display: flex; align-items: center; gap: 4px;
@@ -50,10 +56,9 @@
   }
   .leg-size svg { display: block; }
   #desc {
-    position: fixed; bottom: 68px; left: 50%; transform: translateX(-50%);
     font-family: system-ui, sans-serif; font-size: 11px;
     color: rgba(255,255,255,0.45); text-align: center;
-    max-width: 80vw; pointer-events: none; z-index: 2;
+    max-width: 80vw;
   }
   #panel {
     position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%) translateY(12px);
@@ -93,8 +98,10 @@
 <canvas id="c"></canvas>
 <div id="hero"><div class="num" id="heroNum">-</div><div class="lbl">in constellation</div></div>
 <div id="stamp">PokéAPI · loading...</div>
-<div id="legend"></div>
-<div id="desc">Each Pokemon is a star in this type-driven constellation</div>
+<div id="bottom">
+  <div id="desc">Each Pokemon is a star in this type-driven constellation</div>
+  <div id="legend"></div>
+</div>
 <div id="panel">
   <div class="pname" id="pName"></div>
   <div class="ptypes" id="pTypes"></div>
