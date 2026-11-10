@@ -16,14 +16,14 @@
 
 </h6>
 
-<a href="https://parthchandak02.github.io/type/"><b>Live demo</b></a> ·
+<a href="https://parthchandak02.github.io/pokemon-constellation/"><b>Live demo</b></a> ·
 <a href="#how-it-works"><b>How it works</b></a> ·
 <a href="#tap-a-star"><b>Tap a star</b></a> ·
 <a href="#run-it"><b>Run it</b></a>
 
 <br><br>
 
-<a href="https://parthchandak02.github.io/type/"><img src="docs/assets/readme/hero.jpg" width="100%" alt="Thirty coloured circles of different sizes on a dark dot grid, joined by thin grey lines, with 30 in constellation in the top-right and a legend of Pokémon types along the bottom"></a>
+<a href="https://parthchandak02.github.io/pokemon-constellation/"><img src="docs/assets/readme/hero.jpg" width="100%" alt="Thirty coloured circles of different sizes on a dark dot grid, joined by thin grey lines, with 30 in constellation in the top-right and a legend of Pokémon types along the bottom"></a>
 
 <sub>Local capture, 22 October 2026. Real PokéAPI data; the batch is random on every load.</sub>
 
